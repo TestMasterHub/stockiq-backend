@@ -1,51 +1,106 @@
 openapi: 3.0.0
 info:
-  title: VeeraStockIQ Core API
-  description: High-performance, stateless backend for NSE/Yahoo proxying, data scraping (Screener.in), RSS news aggregation, and AI signal generation via Llama-3.
+  title: VeeraStockIQ Core AI API
+  description: High-performance financial backend providing unified Yahoo Finance data extraction, Screener.in fundamental scraping, real-time news management, and SEBI-grade quantitative AI trade signal generation via Llama-3.
   version: 1.0.0
 servers:
-  - url: http://localhost:5000
+  - url: https://apiveerastockiqbackend.vercel.app
+    description: Production Vercel Server
+  - url: http://localhost:5656
     description: Local Development Server
 paths:
-  /api/nse/{proxyPath}:
+  /api/nse/api/quote-equity:
     get:
-      summary: Proxy request to NSE India
-      description: Transparently proxies requests to www.nseindia.com while handling session cookies and retries.
+      summary: Unified Stock Data & Deep Metrics
+      description: Intercepts equity requests to extract a unified data block from Yahoo Finance tracking price, fundamentals, financials with historical P&L arrays, and shareholding.
       parameters:
-        - in: path
-          name: proxyPath
-          required: true
-          schema:
-            type: string
-          description: The NSE endpoint path (e.g., api/quote-equity)
         - in: query
           name: symbol
-          schema:
-            type: string
-          description: The stock symbol (e.g., WIPRO)
-      responses:
-        '200':
-          description: Successful NSE JSON response
-        '502':
-          description: NSE Session Failure
-  /yf/{proxyPath}:
-    get:
-      summary: Proxy request to Yahoo Finance
-      description: Transparent stream proxy to query1.finance.yahoo.com for high-speed charting data.
-      parameters:
-        - in: path
-          name: proxyPath
           required: true
           schema:
             type: string
-          description: The Yahoo Finance endpoint path (e.g., v8/finance/chart/WIPRO.NS)
+          description: Stock ticker symbol (e.g., WIPRO)
       responses:
         '200':
-          description: Successful Yahoo Finance response
+          description: Successful data payload matching frontend tab components.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  info:
+                    type: object
+                    properties:
+                      symbol: { type: string, example: "WIPRO" }
+                      companyName: { type: string, example: "Wipro Limited" }
+                      sector: { type: string, example: "Technology" }
+                      industry: { type: string, example: "Information Technology Services" }
+                      exchange: { type: string, example: "NSE" }
+                      employees: { type: integer, nullable: true, example: 234000 }
+                      currency: { type: string, example: "INR" }
+                  priceInfo:
+                    type: object
+                    properties:
+                      lastPrice: { type: number, example: 184.47 }
+                      change: { type: number, example: 1.800003 }
+                      pChange: { type: number, example: 0.9853852 }
+                      previousClose: { type: number, example: 182.67 }
+                      open: { type: number, example: 184 }
+                      close: { type: number, example: 184.47 }
+                      vwap: { type: number, example: 184.47 }
+                      lowerCP: { type: string, example: "-" }
+                      upperCP: { type: string, example: "-" }
+                  metadata:
+                    type: object
+                    properties:
+                      lastUpdateTime: { type: string, example: "17/6/2026, 3:30:00 pm" }
+                  fundamentals:
+                    type: object
+                    properties:
+                      marketCap: { type: number, example: 1935294595072 }
+                      peRatio: { type: number, example: 14.675418 }
+                      pbRatio: { type: number, example: 2.1828187 }
+                      eps: { type: number, example: 12.57 }
+                      dividendYield: { type: number, example: 0 }
+                      roe: { type: number, example: 15.439998 }
+                      roa: { type: number, example: 6.9120005 }
+                      bookValue: { type: number, example: 84.51 }
+                      fiftyTwoWeekHigh: { type: number, example: 273.1 }
+                      fiftyTwoWeekLow: { type: number, example: 175.83 }
+                      debtToEquity: { type: number, example: 22.853 }
+                      profitMargin: { type: number, example: 14.248 }
+                  financials:
+                    type: object
+                    properties:
+                      totalRevenue: { type: number, example: 926240014336 }
+                      netIncome: { type: number, example: 131974000000 }
+                      operatingIncome: { type: number, example: 0 }
+                      totalAssets: { type: number, example: 0 }
+                      totalLiabilities: { type: number, example: 0 }
+                      totalCash: { type: number, example: 543235014656 }
+                      totalDebt: { type: number, example: 202910007296 }
+                      pnlAnnual:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PnLStatement'
+                      pnlQuarterly:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/PnLStatement'
+                  shareholding:
+                    type: object
+                    properties:
+                      promoter: { type: string, example: "72.69%" }
+                      institutions: { type: string, example: "14.85%" }
+        '400':
+          $ref: '#/components/responses/400Error'
+        '502':
+          $ref: '#/components/responses/502Error'
+
   /api/stock/{symbol}/shareholding:
     get:
-      summary: Get FII/DII & Promoter Shareholding
-      description: Scrapes recent shareholding data from Screener.in.
+      summary: Scraped Screener.in Shareholding
+      description: Parses public records from Screener.in to display promoter, public, FII, and DII data.
       parameters:
         - in: path
           name: symbol
@@ -55,11 +110,25 @@ paths:
           example: WIPRO
       responses:
         '200':
-          description: Shareholding data retrieved
+          description: Parsed tabular shareholding data.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol: { type: string, example: "WIPRO" }
+                  shareholding:
+                    type: object
+                    properties:
+                      promoter: { type: string, example: "72.69%" }
+                      fii: { type: string, example: "14.85%" }
+                      dii: { type: string, example: "7.12%" }
+                      public: { type: string, example: "5.34%" }
+
   /api/stock/{symbol}/corporate-actions:
     get:
-      summary: Get Corporate Actions
-      description: Scrapes recent dividends, splits, and bonus issues from Screener.in announcements.
+      summary: Scraped Corporate Actions
+      description: Scrapes announcements to extract structural corporate actions such as stock splits, dividends, bonuses, and buybacks.
       parameters:
         - in: path
           name: symbol
@@ -69,11 +138,28 @@ paths:
           example: WIPRO
       responses:
         '200':
-          description: Corporate actions retrieved
+          description: Array of processed corporate actions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol: { type: string, example: "WIPRO" }
+                  actions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        icon: { type: string, example: "💰" }
+                        type: { type: string, example: "Dividend" }
+                        note: { type: string, example: "Interim Dividend of Rs.1/- per share" }
+                        date: { type: string, example: "24 Jan 2025" }
+                        url: { type: string, example: "/insider/announcements/12345/" }
+
   /api/stock/{symbol}/news:
     get:
-      summary: Get News & Sentiment
-      description: Fetches Google News RSS for the stock and applies a custom NLP sentiment analysis tag.
+      summary: News Feed Fetcher
+      description: Aggregates systemic financial headlines mapped directly via core cached endpoints.
       parameters:
         - in: path
           name: symbol
@@ -83,70 +169,140 @@ paths:
           example: WIPRO
       responses:
         '200':
-          description: List of recent news articles with sentiment
+          description: Documented news payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol: { type: string, example: "WIPRO" }
+                  news:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        title: { type: string, example: "Wipro Announces Strategic AI Cloud Expansion Layout" }
+                        sentiment: { type: string, example: "positive" }
+
   /api/ai/signals:
     post:
-      summary: Generate AI Trade Signal
-      description: Feeds technical, fundamental, and sentiment data to Groq (Llama-3) to generate a structured JSON trade recommendation.
+      summary: SEBI-Grade Quantitative Signal Generator
+      description: Consumes comprehensive market context and feeds structured analytical parameters to Groq utilizing low-temperature execution to guarantee strict financial tracking outputs.
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              required:
+                - symbol
               properties:
-                symbol:
-                  type: string
-                  example: WIPRO
-                price:
-                  type: number
-                  example: 450.5
-                changePercent:
-                  type: number
-                  example: 1.2
-                trend:
-                  type: string
-                  example: Strong Uptrend
-                rsi:
-                  type: number
-                  example: 65.4
-                sma20:
-                  type: number
-                  example: 440
-                sma50:
-                  type: number
-                  example: 420
-                volume:
-                  type: number
-                  example: 2500000
-                peRatio:
-                  type: number
-                  example: 22.5
-                marketCap:
-                  type: number
-                  example: 235000
+                symbol: { type: string, example: "WIPRO" }
+                price: { type: number, example: 184.47 }
+                changePercent: { type: number, example: 0.98 }
+                trend: { type: string, example: "Mild Uptrend" }
+                rsi: { type: number, example: 54.2 }
+                sma20: { type: number, example: 181.2 }
+                sma50: { type: number, example: 178.5 }
+                volume: { type: number, example: 16100000 }
+                peRatio: { type: number, example: 14.67 }
+                marketCap: { type: number, example: 1935294 }
                 shareholding:
                   type: object
                   properties:
-                    promoter:
-                      type: string
-                    fii:
-                      type: string
-                    dii:
-                      type: string
+                    promoter: { type: string, example: "72.69%" }
+                    fii: { type: string, example: "14.85%" }
+                    dii: { type: string, example: "7.12%" }
                 news:
                   type: array
                   items:
                     type: object
                     properties:
-                      title:
-                        type: string
-                      sentiment:
-                        type: string
+                      title: { type: string }
+                      sentiment: { type: string }
       responses:
         '200':
-          description: AI Signal JSON output
+          description: Definitive structural analytical signal output.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  entry_price: { type: number, example: 182.5 }
+                  target_price: { type: number, example: 215.0 }
+                  stop_loss: { type: number, example: 172.0 }
+                  rr_ratio: { type: string, example: "1:2.5" }
+                  composite_score: { type: integer, example: 8 }
+                  fundamental_score: { type: integer, example: 9 }
+                  technical_score: { type: integer, example: 7 }
+                  sentiment_score: { type: integer, example: 8 }
+                  verdict:
+                    type: string
+                    enum: [STRONG BUY, BUY, HOLD, AVOID, STRONG AVOID]
+                    example: "BUY"
+                  timeframe:
+                    type: string
+                    enum: [Short, Medium, Long]
+                    example: "Medium"
+                  reasoning: { type: string, example: "Technical support holding firm at SMA20 alongside deep value backing within current PE structures." }
+                  key_points:
+                    type: array
+                    items: { type: string }
+                    example: ["FII accumulation evident over trailing quarter", "RSI indicator positioning out of oversold zone", "Strong domestic pipeline catalysts"]
         '400':
-          description: Missing payload data
+          $ref: '#/components/responses/400Error'
         '503':
-          description: Groq API unavailable
+          description: Groq Engine or system context generation limit failure.
+
+  /yf/{proxyPath}:
+    get:
+      summary: High-Speed Charting Passthrough
+      description: Low-level transparent stream router connecting the application directly to the Yahoo database infrastructure without proxy authentication bottlenecks.
+      parameters:
+        - in: path
+          name: proxyPath
+          required: true
+          schema:
+            type: string
+          description: Native endpoint route parameter mapping (e.g., v8/finance/chart/WIPRO.NS)
+      responses:
+        '200':
+          description: Native file data stream passthrough directly to client components.
+
+components:
+  schemas:
+    PnLStatement:
+      type: object
+      properties:
+        date: { type: string, example: "31/03/2025" }
+        year: { type: integer, example: 2025 }
+        totalRevenue: { type: number, example: 926240014336 }
+        costOfRevenue: { type: number, example: 720450000000 }
+        grossProfit: { type: number, example: 205790014336 }
+        operatingExpenses: { type: number, example: 64200000000 }
+        operatingIncome: { type: number, example: 141590014336 }
+        ebit: { type: number, example: 141590014336 }
+        interestExpense: { type: number, example: 4500000000 }
+        incomeBeforeTax: { type: number, example: 137090014336 }
+        taxProvision: { type: number, example: 5116001433 }
+        netIncome: { type: number, example: 131974000000 }
+
+  responses:
+    400Error:
+      description: Missing request query attributes or body parameter sets.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error: { type: string, example: "Symbol required" }
+    502Error:
+      description: Upstream platform system connection breakdown or target session invalidation.
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status: { type: string, example: "error" }
+              statusCode: { type: integer, example: 502 }
+              message: { type: string, example: "Failed to fetch deep market data for WIPRO." }
