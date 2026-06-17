@@ -11,7 +11,7 @@ class YahooAdapterService {
         const yfSymbol = `${symbol.toUpperCase()}.NS`;
 
         try {
-            // Added 'assetProfile' to fetch Sector, Industry, and Employee counts
+            // Added quarterly and annual income statement modules for full P&L
             const quoteSummary = await yahooFinance.quoteSummary(yfSymbol, {
                 modules: [
                     'price', 
@@ -19,6 +19,7 @@ class YahooAdapterService {
                     'financialData', 
                     'defaultKeyStatistics', 
                     'incomeStatementHistory',
+                    'incomeStatementHistoryQuarterly',
                     'balanceSheetHistory',
                     'majorHoldersBreakdown',
                     'assetProfile' 
@@ -27,25 +28,42 @@ class YahooAdapterService {
 
             if (!quoteSummary) throw new Error("No data returned from Yahoo");
 
-            // Destructure assetProfile alongside the others
             const { 
                 price = {}, 
                 summaryDetail = {}, 
                 financialData = {}, 
                 defaultKeyStatistics = {},
                 incomeStatementHistory = {},
+                incomeStatementHistoryQuarterly = {},
                 balanceSheetHistory = {},
                 majorHoldersBreakdown = {},
                 assetProfile = {}
             } = quoteSummary;
 
-            const latestIncome = incomeStatementHistory.incomeStatementHistory?.[0] || {};
             const latestBalance = balanceSheetHistory.balanceSheetStatements?.[0] || {};
+            
+            // Extract the Historical P&L Arrays
+            const annualIncomeStatements = incomeStatementHistory.incomeStatementHistory || [];
+            const quarterlyIncomeStatements = incomeStatementHistoryQuarterly.incomeStatementHistory || [];
+            const latestIncome = annualIncomeStatements[0] || {};
+
+            // Helper to format Yahoo's messy P&L into a clean array for your React UI tables
+            const formatPnL = (statements) => statements.map(stmt => ({
+                date: stmt.endDate ? new Date(stmt.endDate).toLocaleDateString() : "—",
+                year: stmt.endDate ? new Date(stmt.endDate).getFullYear() : "—",
+                totalRevenue: stmt.totalRevenue || 0,
+                costOfRevenue: stmt.costOfRevenue || 0,
+                grossProfit: stmt.grossProfit || 0,
+                operatingExpenses: stmt.totalOperatingExpenses || 0,
+                operatingIncome: stmt.operatingIncome || 0,
+                ebit: stmt.ebit || 0,
+                interestExpense: stmt.interestExpense || 0,
+                incomeBeforeTax: stmt.incomeBeforeTax || 0,
+                taxProvision: stmt.incomeTaxExpense || 0,
+                netIncome: stmt.netIncome || 0,
+            }));
 
             return {
-                // ─────────────────────────────────────────────
-                // EXACT UI MAPPING FOR COMPANY INFORMATION
-                // ─────────────────────────────────────────────
                 info: {
                     symbol: symbol,
                     companyName: price.longName || price.shortName || symbol,
@@ -92,7 +110,13 @@ class YahooAdapterService {
                     totalAssets: latestBalance.totalAssets || 0,
                     totalLiabilities: latestBalance.totalLiab || 0,
                     totalCash: financialData.totalCash || 0,
-                    totalDebt: financialData.totalDebt || 0
+                    totalDebt: financialData.totalDebt || 0,
+                    
+                    // ─────────────────────────────────────────────
+                    // FULL HISTORICAL P&L ARRAYS
+                    // ─────────────────────────────────────────────
+                    pnlAnnual: formatPnL(annualIncomeStatements),
+                    pnlQuarterly: formatPnL(quarterlyIncomeStatements)
                 },
                 shareholding: {
                     promoter: ((majorHoldersBreakdown.insidersPercentHeld || 0) * 100).toFixed(2) + '%',

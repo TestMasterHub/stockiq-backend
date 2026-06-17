@@ -4,61 +4,79 @@ const AppError = require('../errors/AppError');
 class AiService {
     constructor() {
         this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+        this.modelName = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+    }
+
+    async _callGroqWithRetry(messages, retries = 3, delay = 2000) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const completion = await this.groq.chat.completions.create({
+                    messages,
+                    model: this.modelName,
+                    temperature: 0.1, 
+                    response_format: { type: 'json_object' }
+                });
+                return JSON.parse(completion.choices[0].message.content);
+            } catch (error) {
+                if (error.status === 429 && i < retries - 1) {
+                    console.warn(`[AI Service] Free tier limit hit. Silently retrying in ${delay / 1000}s...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2; 
+                } else {
+                    throw error;
+                }
+            }
+        }
     }
 
     async generateSignal(ctx) {
         const { symbol, price, changePercent, trend, rsi, sma20, sma50, volume, peRatio, marketCap, shareholding, news } = ctx;
 
-        const newsHeadlines = news && news.length > 0 
-            ? news.map((n, i) => `${i + 1}. [${n.sentiment.toUpperCase()}] ${n.title}`).join('\n')
-            : "No recent news available.";
+        const topNews = (news || []).slice(0, 3)
+            .map(n => `[${n.sentiment.toUpperCase()}] ${n.title}`)
+            .join(' | ');
 
         const sh = shareholding || {};
         
+        // ─────────────────────────────────────────────────────────────────
+        // ENHANCED, HIGHLY SPECIFIC INSTITUTIONAL PROMPT
+        // ─────────────────────────────────────────────────────────────────
         const prompt = `
-            You are an expert Indian stock market quantitative and fundamental analyst.
-            Analyze the following data for ${symbol} and generate a trade signal.
+            Role: Elite SEBI-Grade Quantitative & Fundamental Equity Strategist (NSE/BSE).
+            Persona: You are a ruthless, data-driven institutional algorithmic trader. You synthesize technical momentum convergence, deep-value fundamental metrics, institutional order flow (FII/DII accumulation/distribution), and NLP macroeconomic sentiment to identify high-probability, asymmetric risk-reward trading setups. You do not give generic advice; you give precise, mathematical verdicts.
+            Task: Analyze the ${symbol} data matrix below and generate a strict JSON trade signal.
 
-            1. LIVE PRICE & TECHNICALS:
-            - Price: ₹${price} (${changePercent}%) | Volume: ${volume}
-            - Trend: ${trend} | RSI (14): ${rsi}
-            - SMA20: ₹${sma20} | SMA50: ₹${sma50}
-
-            2. FUNDAMENTALS & SHAREHOLDING:
-            - Market Cap: ₹${marketCap} Cr | P/E Ratio: ${peRatio}
-            - Promoter Holding: ${sh.promoter || 'Unknown'} | FII Holding: ${sh.fii || 'Unknown'} | DII Holding: ${sh.dii || 'Unknown'}
-
-            3. RECENT NEWS & SENTIMENT:
-            ${newsHeadlines}
+            DATA MATRIX:
+            - Price Action: ₹${price} (${changePercent}%) | Vol: ${volume} | Trend: ${trend}
+            - Technicals: RSI(14): ${rsi} | SMA20: ₹${sma20} | SMA50: ₹${sma50}
+            - Fundamentals: MCap: ₹${marketCap}Cr | PE: ${peRatio}
+            - Institutional Flow: Prom: ${sh.promoter || 'N/A'} | FII: ${sh.fii || 'N/A'} | DII: ${sh.dii || 'N/A'}
+            - Sentiment/Catalysts: ${topNews || "None"}
             
-            INSTRUCTIONS: Provide a STRICT JSON object ONLY with exactly these keys:
+            OUTPUT EXACT JSON FORMAT ONLY:
             {
               "entry_price": <number>,
               "target_price": <number>,
               "stop_loss": <number>,
               "rr_ratio": <string>,
-              "composite_score": <integer 1-10>,
-              "fundamental_score": <integer 1-10>,
-              "technical_score": <integer 1-10>,
-              "sentiment_score": <integer 1-10>,
+              "composite_score": <1-10>,
+              "fundamental_score": <1-10>,
+              "technical_score": <1-10>,
+              "sentiment_score": <1-10>,
               "verdict": <"STRONG BUY" | "BUY" | "HOLD" | "AVOID" | "STRONG AVOID">,
-              "timeframe": <"Short-term" | "Medium-term" | "Long-term">,
-              "reasoning": <string, 2-3 sentences explaining the thesis>,
-              "key_points": <array of 3 to 5 strings highlighting catalysts/risks>
+              "timeframe": <"Short" | "Medium" | "Long">,
+              "reasoning": <"2 sharp, analytical sentences explaining the convergence of technicals and fundamentals">,
+              "key_points": <["array", "of", "3", "bullish catalysts or bearish risks"]>
             }
         `;
 
         try {
-            const completion = await this.groq.chat.completions.create({
-                messages: [{ role: 'user', content: prompt }],
-                model: 'llama3-70b-8192',
-                temperature: 0.1, 
-                response_format: { type: 'json_object' }
-            });
-            return JSON.parse(completion.choices[0].message.content);
+            return await this._callGroqWithRetry([{ role: 'user', content: prompt }]);
         } catch (error) {
-            throw new AppError('AI Analysis Service currently unavailable.', 503);
+            console.error(`[AI Service Error]:`, error.message);
+            throw new AppError('AI is currently analyzing too many requests. Please try again in a few seconds.', 503);
         }
     }
 }
+
 module.exports = new AiService();
