@@ -1,0 +1,176 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+		"name": "VeeraStockIQ API",
+		"description": "Comprehensive testing suite for the VeeraStockIQ backend engine.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Proxies (Fast Data)",
+			"item": [
+				{
+					"name": "NSE Equity Quote",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/nse/api/quote-equity?symbol=WIPRO",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"nse",
+								"api",
+								"quote-equity"
+							],
+							"query": [
+								{
+									"key": "symbol",
+									"value": "WIPRO"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Yahoo Finance Chart",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/yf/v8/finance/chart/WIPRO.NS?range=1d&interval=1d",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"yf",
+								"v8",
+								"finance",
+								"chart",
+								"WIPRO.NS"
+							],
+							"query": [
+								{
+									"key": "range",
+									"value": "1d"
+								},
+								{
+									"key": "interval",
+									"value": "1d"
+								}
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Deep Data Scrapers",
+			"item": [
+				{
+					"name": "Get FII/DII Shareholding",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/stock/WIPRO/shareholding",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"stock",
+								"WIPRO",
+								"shareholding"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Corporate Actions",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/stock/WIPRO/corporate-actions",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"stock",
+								"WIPRO",
+								"corporate-actions"
+							]
+						}
+					}
+				},
+				{
+					"name": "Get News & Sentiment",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/stock/WIPRO/news",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"stock",
+								"WIPRO",
+								"news"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. AI Analyst Engine",
+			"item": [
+				{
+					"name": "Generate Llama-3 Signal",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"symbol\": \"WIPRO\",\n    \"price\": 455.20,\n    \"changePercent\": 1.4,\n    \"trend\": \"Mild Uptrend\",\n    \"rsi\": 62.5,\n    \"sma20\": 448.10,\n    \"sma50\": 430.50,\n    \"volume\": 3500000,\n    \"peRatio\": 21.4,\n    \"marketCap\": 238000,\n    \"shareholding\": {\n        \"promoter\": \"72.9%\",\n        \"fii\": \"6.8%\",\n        \"dii\": \"11.2%\"\n    },\n    \"news\": [\n        {\n            \"title\": \"Wipro secures major order from European telecom giant\",\n            \"sentiment\": \"positive\"\n        },\n        {\n            \"title\": \"IT sector faces margin concerns amid global slowdown\",\n            \"sentiment\": \"negative\"\n        }\n    ]\n}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/ai/signals",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"ai",
+								"signals"
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

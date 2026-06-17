@@ -1,0 +1,152 @@
+openapi: 3.0.0
+info:
+  title: VeeraStockIQ Core API
+  description: High-performance, stateless backend for NSE/Yahoo proxying, data scraping (Screener.in), RSS news aggregation, and AI signal generation via Llama-3.
+  version: 1.0.0
+servers:
+  - url: http://localhost:5000
+    description: Local Development Server
+paths:
+  /api/nse/{proxyPath}:
+    get:
+      summary: Proxy request to NSE India
+      description: Transparently proxies requests to www.nseindia.com while handling session cookies and retries.
+      parameters:
+        - in: path
+          name: proxyPath
+          required: true
+          schema:
+            type: string
+          description: The NSE endpoint path (e.g., api/quote-equity)
+        - in: query
+          name: symbol
+          schema:
+            type: string
+          description: The stock symbol (e.g., WIPRO)
+      responses:
+        '200':
+          description: Successful NSE JSON response
+        '502':
+          description: NSE Session Failure
+  /yf/{proxyPath}:
+    get:
+      summary: Proxy request to Yahoo Finance
+      description: Transparent stream proxy to query1.finance.yahoo.com for high-speed charting data.
+      parameters:
+        - in: path
+          name: proxyPath
+          required: true
+          schema:
+            type: string
+          description: The Yahoo Finance endpoint path (e.g., v8/finance/chart/WIPRO.NS)
+      responses:
+        '200':
+          description: Successful Yahoo Finance response
+  /api/stock/{symbol}/shareholding:
+    get:
+      summary: Get FII/DII & Promoter Shareholding
+      description: Scrapes recent shareholding data from Screener.in.
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+          example: WIPRO
+      responses:
+        '200':
+          description: Shareholding data retrieved
+  /api/stock/{symbol}/corporate-actions:
+    get:
+      summary: Get Corporate Actions
+      description: Scrapes recent dividends, splits, and bonus issues from Screener.in announcements.
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+          example: WIPRO
+      responses:
+        '200':
+          description: Corporate actions retrieved
+  /api/stock/{symbol}/news:
+    get:
+      summary: Get News & Sentiment
+      description: Fetches Google News RSS for the stock and applies a custom NLP sentiment analysis tag.
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+          example: WIPRO
+      responses:
+        '200':
+          description: List of recent news articles with sentiment
+  /api/ai/signals:
+    post:
+      summary: Generate AI Trade Signal
+      description: Feeds technical, fundamental, and sentiment data to Groq (Llama-3) to generate a structured JSON trade recommendation.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                symbol:
+                  type: string
+                  example: WIPRO
+                price:
+                  type: number
+                  example: 450.5
+                changePercent:
+                  type: number
+                  example: 1.2
+                trend:
+                  type: string
+                  example: Strong Uptrend
+                rsi:
+                  type: number
+                  example: 65.4
+                sma20:
+                  type: number
+                  example: 440
+                sma50:
+                  type: number
+                  example: 420
+                volume:
+                  type: number
+                  example: 2500000
+                peRatio:
+                  type: number
+                  example: 22.5
+                marketCap:
+                  type: number
+                  example: 235000
+                shareholding:
+                  type: object
+                  properties:
+                    promoter:
+                      type: string
+                    fii:
+                      type: string
+                    dii:
+                      type: string
+                news:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      title:
+                        type: string
+                      sentiment:
+                        type: string
+      responses:
+        '200':
+          description: AI Signal JSON output
+        '400':
+          description: Missing payload data
+        '503':
+          description: Groq API unavailable
