@@ -1,3 +1,4 @@
+// AiService.js
 const Groq = require('groq-sdk');
 const AppError = require('../errors/AppError');
 
@@ -30,10 +31,16 @@ class AiService {
     }
 
     async generateSignal(ctx) {
+        console.log(`[AI Service] Generating signal for ${JSON.stringify(ctx, null, 2)}...`);
         const { symbol, price, changePercent, trend, rsi, sma20, sma50, volume, peRatio, marketCap, shareholding, news } = ctx;
 
         const topNews = (news || []).slice(0, 3)
-            .map(n => `[${n.sentiment.toUpperCase()}] ${n.title}`)
+            .map(n => {
+                if (typeof n === 'string') {
+                    return n;
+                }
+                return `[${(n.sentiment || 'NEUTRAL').toUpperCase()}] ${n.title}`;
+            })
             .join(' | ');
 
         const sh = shareholding || {};
